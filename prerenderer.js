@@ -23,14 +23,18 @@ var server = require('webserver').create();
 var port = parseInt(system.args[1]);
 var urlPrefix = system.args[2];
 
+var status_code = 200;
+
 var renderHtml = function(url, cb) {
     var page = require('webpage').create();
     page.settings.loadImages = false;
     page.settings.localToRemoteUrlAccessEnabled = true;
+    
     page.onLoadFinished = function() {
         cb(page.content);
         page.close();
     };
+    
     //shim for react for rendering without bind error
     page.onInitialized = function(){
       page.evaluate(function(){
@@ -42,6 +46,12 @@ var renderHtml = function(url, cb) {
 				}
       }, false)
     };
+
+    page.onResourceReceived = function(response) {
+      if (response.status == "404") {
+        status_code = 404;
+      }
+    };
     
     page.open(url);
 };
@@ -51,7 +61,7 @@ server.listen(port, function (request, response) {
     var url = urlPrefix
         + request.url;
     renderHtml(url, function(html) {
-        response.statusCode = 200;
+        response.statusCode = status_code;
         response.write(html);
         response.close();
     });
